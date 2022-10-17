@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tommzn
+  labels:
+    name: tommzn
+
+---
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: tommzn-testapi
+  namespace: tommzn
+  labels:
+    app: tommzn-testapi
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tommzn-testapi
+  template:
+    metadata:
+      labels:
+        app: tommzn-testapi
+    spec:
+      containers:
+        - name: tommzn-testapi
+          image: ghcr.io/tommzn/testapi:v0.0.1
+          imagePullPolicy: Always
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 10
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: tommzn-testapi
+  namespace: tommzn
+spec:
+  selector:
+    app: tommzn-testapi
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 31475
+      protocol: TCP
+
