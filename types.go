@@ -8,8 +8,13 @@ import (
 )
 
 type webServer struct {
-	logger     log.Logger
-	httpServer *http.Server
-	errTimers  map[string]time.Time
-	okTimers   map[string]time.Time
+	logger         log.Logger
+	httpServer     *http.Server
+	errTimers      map[string]time.Time
+	okTimers       map[string]time.Time
+	responseConfig ResponseConfig
+}
+
+type ResponseConfig struct {
+	StatusCode *int `json:"statuscode,omitempty"`
 }
