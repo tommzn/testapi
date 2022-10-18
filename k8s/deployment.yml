@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
         - name: tommzn-testapi
-          image: tommzn/testapi:v0.0.2
+          image: tommzn/testapi:v0.0.3
           imagePullPolicy: Always
           startupProbe:
             httpGet:
