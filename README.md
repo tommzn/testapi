@@ -6,6 +6,6 @@ kubectl apply -f k8s/deployment.yml
 ```
 ## Docker
 ```
-docker run -d -p 8080:31475 tommzn/testapi:latest
+docker run -d -p 8080 tommzn/testapi:latest
 ```
 
