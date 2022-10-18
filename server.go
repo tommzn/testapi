@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -20,9 +21,10 @@ const DEFAULT_PORT = "8080"
 
 func newServer(logger log.Logger) *webServer {
 	return &webServer{
-		logger:    logger,
-		errTimers: make(map[string]time.Time),
-		okTimers:  make(map[string]time.Time),
+		logger:         logger,
+		errTimers:      make(map[string]time.Time),
+		okTimers:       make(map[string]time.Time),
+		responseConfig: ResponseConfig{},
 	}
 }
 
@@ -34,6 +36,10 @@ func (server *webServer) Run(ctx context.Context, waitGroup *sync.WaitGroup) err
 
 	router := mux.NewRouter()
 	router.HandleFunc("/api/v1/test", server.handleRequest)
+
+	router.HandleFunc("/api/v1/responseconfig", server.handleResponseConfigUpdate).Methods("PUT", "POST")
+	router.HandleFunc("/api/v1/responseconfig", server.handleResponseConfigDelete).Methods("DELETE")
+
 	router.HandleFunc("/health", server.handleHealthCheckRequest).Methods("GET")
 
 	server.logger.Infof("Listen [%s]", DEFAULT_PORT)
@@ -64,7 +70,16 @@ func (server *webServer) stopHttpServer() {
 	}
 }
 
-func (server *webServer) handleHealthCheckRequest(w http.ResponseWriter, r *http.Request) {
+func (server *webServer) handleResponseConfigUpdate(w http.ResponseWriter, r *http.Request) {
+	if err := json.NewDecoder(r.Body).Decode(&server.responseConfig); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (server *webServer) handleResponseConfigDelete(w http.ResponseWriter, r *http.Request) {
+	server.responseConfig = ResponseConfig{}
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -84,6 +99,10 @@ func (server *webServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(server.getResponseStatus(r))
 }
 
+func (server *webServer) handleHealthCheckRequest(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(server.getResponseStatus(r))
+}
+
 func (server *webServer) logContextFromRequest(r *http.Request) {
 	contextValues := make(map[string]string)
 	contextValues["requestid"] = uuid.New().String()
@@ -95,6 +114,10 @@ func (server *webServer) logContextFromRequest(r *http.Request) {
 }
 
 func (server *webServer) getResponseStatus(r *http.Request) int {
+
+	if server.responseConfig.StatusCode != nil {
+		return *server.responseConfig.StatusCode
+	}
 
 	switch r.URL.Query().Get("responsestatusstrategy") {
 	case "5xx":
